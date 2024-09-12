@@ -3,8 +3,15 @@ PyTorch modules for sampling from Perlin Noise (or Value Noise)
 - N-dimensional noise, not just 2D or 3D
 - Several noise fields can be sampled in parallel
 - Modules are differentiable
-- Resolution, smoothness, and periodicity of noise can be configured
+- Resolution, smoothness, scale, and periodicity of noise can be configured
 - Noise fields can be fixed or trainable
+
+## Provided Noise Generators
+- `ValueNoise()`: Value noise (value of noise is defined at grid points)
+- `PerlinNoise()`: Perlin noise (gradient of noise is defined at grid points)
+- `CompositeNoise()`: Sum of multiple noise fields
+- `CompositeValueNoise()`: Weighted sum of multiple value noise fields at multiple resolutions
+- `CompositePerlinNoise()`: Weighted sum of multiple Perlin noise fields at multiple resolutions
 
 ## Examples
 The following examples each visualize 8 noise fields sampled for 10000 random points.

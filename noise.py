@@ -185,7 +185,32 @@ class CompositeValueNoise(nn.Module):
         self.trainable = trainable
         self.seed = self.components[0].seed
         self.smoothness = smoothness
-        
+
+    def forward(self, x):
+        return self.composite_model(x)
+    
+class CompositePerlinNoise(nn.Module):
+    def __init__(self, n_dims, n_fields, res_list, seed=None, periodic=False, smoothness=1, multiplier=1., trainable=False):
+        super().__init__()
+        assert res_list and type(res_list) in [list, tuple], "res_list should be a list of noise resolutions"
+        self.components = []
+        for _, res in enumerate(res_list):
+            frac =  float(res_list[0]) / float(res)
+            model = PerlinNoise(n_dims=n_dims, n_fields=n_fields, res=res, seed=seed, periodic=periodic,
+                               multiplier=multiplier*frac, smoothness=smoothness, trainable=trainable)
+            self.components.append(model)
+            seed = 1 + model.seed
+        self.composite_model = CompositeNoise(self.components)
+        self.n_dims = self.composite_model.n_dims
+        self.n_fields = self.composite_model.n_fields
+        self.n_components = len(self.components)
+        self.name = "Composite Perlin Noise"
+        self.res = res_list
+        self.periodic = periodic
+        self.multiplier = multiplier
+        self.trainable = trainable
+        self.seed = self.components[0].seed
+        self.smoothness = smoothness
 
     def forward(self, x):
         return self.composite_model(x)
