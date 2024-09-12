@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 
 class ValueNoise(nn.Module):
-    def __init__(self, n_dims, n_fields, res, seed=None, periodic=False, smoothness=1, trainable=False):
+    def __init__(self, n_dims, n_fields, res, seed=None, periodic=False, smoothness=1, multiplier=1., trainable=False):
         super().__init__()
         self.smoothness = int(smoothness)
         assert self.smoothness > 0 and self.smoothness < 4, "Smoothness must be 1, 2, or 3."
@@ -17,6 +17,7 @@ class ValueNoise(nn.Module):
         else:
             self.seed = torch.seed()
         self.periodic = periodic
+        self.multiplier = multiplier
         self.trainable = trainable
         if trainable:
             self.values = nn.Parameter(self.init_values())
@@ -67,11 +68,11 @@ class ValueNoise(nn.Module):
             weights = locs[:,i, *(None,)*(self.n_dims - i)]
             vals = torch.lerp(vals[:,0,...], vals[:,1,...], self.wfun(weights))
 
-        return vals
+        return vals * self.multiplier
 
 
 class PerlinNoise(nn.Module):
-    def __init__(self, n_dims, n_fields, res, seed=None, periodic=False, smoothness=1, trainable=False):
+    def __init__(self, n_dims, n_fields, res, seed=None, periodic=False, smoothness=1, multiplier=1., trainable=False):
         super().__init__()
         self.smoothness = int(smoothness)
         assert self.smoothness > 0 and self.smoothness < 4, "Smoothness must be 1, 2, or 3."
@@ -84,6 +85,7 @@ class PerlinNoise(nn.Module):
         else:
             self.seed = torch.seed()
         self.periodic = periodic
+        self.multiplier = multiplier
         self.trainable = trainable
         if trainable:
             self.grads = nn.Parameter(self.init_grads())
@@ -138,4 +140,52 @@ class PerlinNoise(nn.Module):
         for i in range(self.n_dims):
             weights = locs[:,i, *(None,)*(self.n_dims - i)]
             vals = torch.lerp(vals[:,0,...], vals[:,1,...], self.wfun(weights))
-        return vals
+        return vals * self.multiplier
+
+class CompositeNoise(nn.Module):
+    def __init__(self, component_models = []):
+        super().__init__()
+        assert component_models and type(component_models) in [list, tuple, nn.ModuleList], "Pass in a list of PerlinNoise and/or ValueNoise models"
+        self.n_components = len(component_models)
+        self.n_dims = component_models[0].n_dims
+        self.n_fields = component_models[0].n_fields
+        for model in component_models:
+            assert model.n_dims == self.n_dims, "Each component noise model must have same number of input dimensions"
+            assert model.n_fields == self.n_fields, "Each component noise model must have same number of output fields"
+        self.components = nn.ModuleList(component_models)
+        self.name = "Composite Noise"
+
+    def forward(self, x):
+        composite_field = self.components[0](x)
+        if self.n_components == 1:
+            return composite_field
+        for model in self.components[1:]:
+            composite_field = composite_field + model(x)
+        return composite_field
+
+class CompositeValueNoise(nn.Module):
+    def __init__(self, n_dims, n_fields, res_list, seed=None, periodic=False, smoothness=1, multiplier=1., trainable=False):
+        super().__init__()
+        assert res_list and type(res_list) in [list, tuple], "res_list should be a list of noise resolutions"
+        self.components = []
+        for _, res in enumerate(res_list):
+            frac =  float(res_list[0]) / float(res)
+            model = ValueNoise(n_dims=n_dims, n_fields=n_fields, res=res, seed=seed, periodic=periodic,
+                               multiplier=multiplier*frac, smoothness=smoothness, trainable=trainable)
+            self.components.append(model)
+            seed = 1 + model.seed
+        self.composite_model = CompositeNoise(self.components)
+        self.n_dims = self.composite_model.n_dims
+        self.n_fields = self.composite_model.n_fields
+        self.n_components = len(self.components)
+        self.name = "Composite Value Noise"
+        self.res = res_list
+        self.periodic = periodic
+        self.multiplier = multiplier
+        self.trainable = trainable
+        self.seed = self.components[0].seed
+        self.smoothness = smoothness
+        
+
+    def forward(self, x):
+        return self.composite_model(x)
