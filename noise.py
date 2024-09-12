@@ -123,7 +123,7 @@ class PerlinNoise(nn.Module):
         if self.periodic:
             idxB[idxB == self.res] = 0    # -> wrap for periodic boundary
         idx = torch.stack((idxA, idxB), dim=-1)
-        offsets = torch.stack((locs, 1.0-locs), dim=-1)
+        offsets = torch.stack((locs, locs-1.0), dim=-1)
 
         idx_verts = []
         offsets_verts = []
