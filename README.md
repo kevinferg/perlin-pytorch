@@ -4,6 +4,7 @@ PyTorch modules for sampling from Perlin Noise (or Value Noise)
 - Several noise fields can be sampled in parallel
 - Modules are differentiable
 - Resolution, smoothness, and periodicity of noise can be configured
+- Noise fields can be fixed or trainable
 
 ## Examples
 The following examples each visualize 8 noise fields sampled for 10000 random points.
@@ -16,12 +17,13 @@ import torch
 from noise import *
 
 ### Create Perlin Noise Module ###
-n_dims     =  3
-res        =  4
-n_fields   = 24
-periodic   = True
-smoothness =  2
-model = PerlinNoise(n_dims=n_dims, n_fields=n_fields, res=res, periodic=periodic, smoothness=smoothness)
+n_dims     =     3
+res        =     4
+n_fields   =    24
+periodic   =  True
+smoothness =     2
+trainable  = False
+model = PerlinNoise(n_dims=n_dims, n_fields=n_fields, res=res, periodic=periodic, smoothness=smoothness, trainable=trainable)
 
 ### Sample noise at 10000 random points ###
 n_points = 10000

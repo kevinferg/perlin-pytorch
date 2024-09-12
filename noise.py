@@ -1,9 +1,10 @@
 import torch
+from torch import nn
 import torch.nn.functional as F
 
 
-class ValueNoise(torch.nn.Module):
-    def __init__(self, n_dims, n_fields, res, seed=None, periodic=False, smoothness=1):
+class ValueNoise(nn.Module):
+    def __init__(self, n_dims, n_fields, res, seed=None, periodic=False, smoothness=1, trainable=False):
         super().__init__()
         self.smoothness = int(smoothness)
         assert self.smoothness > 0 and self.smoothness < 4, "Smoothness must be 1, 2, or 3."
@@ -16,7 +17,11 @@ class ValueNoise(torch.nn.Module):
         else:
             self.seed = torch.seed()
         self.periodic = periodic
-        self.values = self.init_values()
+        self.trainable = trainable
+        if trainable:
+            self.values = nn.Parameter(self.init_values())
+        else:
+            self.values = self.init_values()
         self.corners = self.init_corners()
         self.name = "Value Noise"
 
@@ -65,8 +70,8 @@ class ValueNoise(torch.nn.Module):
         return vals
 
 
-class PerlinNoise(torch.nn.Module):
-    def __init__(self, n_dims, n_fields, res, seed=None, periodic=False, smoothness=1):
+class PerlinNoise(nn.Module):
+    def __init__(self, n_dims, n_fields, res, seed=None, periodic=False, smoothness=1, trainable=False):
         super().__init__()
         self.smoothness = int(smoothness)
         assert self.smoothness > 0 and self.smoothness < 4, "Smoothness must be 1, 2, or 3."
@@ -79,7 +84,11 @@ class PerlinNoise(torch.nn.Module):
         else:
             self.seed = torch.seed()
         self.periodic = periodic
-        self.grads = self.init_grads()
+        self.trainable = trainable
+        if trainable:
+            self.grads = nn.Parameter(self.init_grads())
+        else:
+            self.grads = self.init_grads()
         self.corners = self.init_corners()
         self.name = "Perlin Noise"
 
